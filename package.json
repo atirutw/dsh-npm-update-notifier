@@ -5,6 +5,14 @@
   "type": "module",
   "license": "MIT",
   "author": "Atirut Wattanamongkol",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/atirutw/dsh-npm-update-notifier.git"
+  },
+  "homepage": "https://github.com/atirutw/dsh-npm-update-notifier#readme",
+  "bugs": {
+    "url": "https://github.com/atirutw/dsh-npm-update-notifier/issues"
+  },
   "keywords": [
     "dsh",
     "dsh-plugin",
