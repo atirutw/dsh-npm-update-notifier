@@ -1,0 +1,44 @@
+{
+  "name": "npm-update-notifier",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness plugin that notifies you when a newer @deepseek-ai/dsh is available on npm.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Atirut Wattanamongkol",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "npm",
+    "update-notifier"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "docs",
+    "icon.svg"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=24.9.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  }
+}

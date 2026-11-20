@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="300" viewBox="0 0 640 300" fill="none">
+  <rect width="640" height="300" rx="20" fill="#F3F5F9"/>
+
+  <!-- Settings panel -->
+  <rect x="44" y="32" width="400" height="236" rx="14" fill="#FFFFFF" stroke="#D6DDE7" stroke-width="2"/>
+
+  <!-- Header row -->
+  <rect x="68" y="54" width="104" height="12" rx="6" fill="#D6DDE7"/>
+  <rect x="68" y="78" width="168" height="8" rx="4" fill="#E4E9F0"/>
+  <rect x="352" y="62" width="68" height="24" rx="12" fill="#EDF1F6"/>
+
+  <!-- Row 1 -->
+  <rect x="68" y="112" width="118" height="10" rx="5" fill="#C9D2DE"/>
+  <rect x="68" y="132" width="196" height="8" rx="4" fill="#E4E9F0"/>
+  <rect x="356" y="116" width="64" height="22" rx="11" fill="#EDF1F6"/>
+  <rect x="68" y="160" width="268" height="1" fill="#E9EDF3"/>
+
+  <!-- Focused updates row -->
+  <rect x="68" y="180" width="104" height="10" rx="5" fill="#9FB2C8"/>
+  <rect x="68" y="200" width="184" height="8" rx="4" fill="#D6DDE7"/>
+  <rect x="68" y="216" width="148" height="8" rx="4" fill="#E4E9F0"/>
+  <rect x="330" y="180" width="88" height="20" rx="10" fill="#E8F0FF" stroke="#145AF3" stroke-width="1.5"/>
+  <rect x="352" y="206" width="66" height="24" rx="7" fill="#FFFFFF" stroke="#B7C3D2" stroke-width="1.5"/>
+  <rect x="68" y="248" width="252" height="1" fill="#E9EDF3"/>
+
+  <!-- Update notice -->
+  <rect x="452" y="76" width="152" height="136" rx="12" fill="#1B2430"/>
+  <circle cx="472" cy="98" r="4.5" fill="#F0A500"/>
+  <rect x="484" y="93" width="74" height="9" rx="4.5" fill="#DDE3EC"/>
+  <path d="M604 94L611 101M611 94L604 101" stroke="#8F9AA8" stroke-width="1.8" stroke-linecap="round"/>
+  <rect x="468" y="118" width="120" height="7" rx="3.5" fill="#8F9AA8"/>
+  <rect x="468" y="132" width="96" height="7" rx="3.5" fill="#5B6879"/>
+  <rect x="468" y="156" width="120" height="1" fill="#33404F"/>
+  <rect x="468" y="166" width="80" height="7" rx="3.5" fill="#5B6879"/>
+  <rect x="468" y="182" width="112" height="16" rx="5" fill="#2B3745"/>
+  <rect x="550" y="188" width="30" height="14" rx="5" fill="#1B2430" stroke="#45D9E7" stroke-width="1.5"/>
+
+  <!-- Update arrow badge -->
+  <circle cx="566" cy="52" r="22" fill="#FFFFFF" stroke="#D6DDE7" stroke-width="2"/>
+  <path d="M566 42V61" stroke="#145AF3" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M558 50L566 42L574 50" stroke="#145AF3" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="582" cy="38" r="6" fill="#F0A500"/>
+</svg>
