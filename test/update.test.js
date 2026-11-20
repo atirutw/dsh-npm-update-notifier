@@ -182,6 +182,25 @@ test('requestStatus reports same and ahead installations without an update', asy
   assert.equal(ahead.updateAvailable, false)
 })
 
+test('requestStatus withholds the command for an unknown install layout', async () => {
+  const status = await requestStatus({
+    options: options(),
+    installation: { version: '0.2.2-rc.5', installDir: '/opt/custom/dsh', installKind: 'unknown', resolvedVia: 'process.argv[1]' },
+    fetchImpl: async () => ({ ok: true, status: 200, json: async () => fakePackument('0.2.2-rc.6') }),
+  })
+  assert.equal(status.updateAvailable, true)
+  assert.equal(status.upgradeCommand, undefined)
+})
+
+test('requestStatus suggests the matching command for pnpm installs', async () => {
+  const status = await requestStatus({
+    options: options(),
+    installation: { version: '0.2.2-rc.5', installDir: '/home/me/.local/share/pnpm/global/5/node_modules/@deepseek-ai/dsh', installKind: 'pnpm', resolvedVia: 'process.argv[1]' },
+    fetchImpl: async () => ({ ok: true, status: 200, json: async () => fakePackument('0.2.2-rc.6') }),
+  })
+  assert.equal(status.upgradeCommand, 'pnpm add -g @deepseek-ai/dsh@latest')
+})
+
 test('requestStatus keeps install information when the registry fails', async () => {
   const status = await requestStatus({
     options: options(),

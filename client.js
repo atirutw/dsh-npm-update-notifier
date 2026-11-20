@@ -29,19 +29,23 @@ window.__ModuleLoader__.load({
       'row.installedNoDate': 'Installed {version}',
       'row.latest': 'Latest on npm: {version} · published {published}',
       'row.latestNoDate': 'Latest on npm: {version}',
+      'row.checkingStatus': 'Checking npm for updates…',
       'row.missingInstall': "Couldn't locate the installed DSH package.",
-      'row.error': 'Update check failed: {message}',
+      'row.error': 'Update check failed.',
       'row.checked': 'Checked {when}',
       'row.checking': 'Checking…',
       'row.checkNow': 'Check now',
-      'row.source.npm': 'npm install',
-      'row.source.pnpm': 'pnpm install',
-      'row.source.yarn': 'yarn install',
-      'row.source.unknown': 'custom install',
-      'row.updateWith': 'Update with',
+      'row.source.npm': 'installed with npm',
+      'row.source.pnpm': 'installed with pnpm',
+      'row.source.yarn': 'installed with yarn',
+      'row.source.unknown': 'install method unknown',
       'status.upToDate': 'Up to date',
       'status.updateAvailable': 'Update available',
       'status.ahead': 'Local build',
+      'error.timeout': 'The npm registry did not answer in time.',
+      'error.http': 'The npm registry answered HTTP {status}.',
+      'error.network': 'Could not reach the npm registry.',
+      'error.registry': 'The npm registry returned an unexpected response.',
       'action.copy': 'Copy',
       'action.copied': 'Copied',
       'notice.title': 'DSH update available',
@@ -56,9 +60,6 @@ window.__ModuleLoader__.load({
     // Formatting helpers
     // ---------------------------------------------------------------------
 
-    const absoluteDate = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-    const relativeTime = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
-
     function toTimestamp(iso) {
       if (typeof iso !== 'string' || iso.length === 0) return undefined
       const timestamp = Date.parse(iso)
@@ -66,23 +67,63 @@ window.__ModuleLoader__.load({
     }
 
     /** "Nov 18, 2026" for a published ISO timestamp, or undefined. */
-    function formatPublished(iso) {
+    function formatPublished(iso, locale) {
       const timestamp = toTimestamp(iso)
-      return timestamp === undefined ? undefined : absoluteDate.format(new Date(timestamp))
+      if (timestamp === undefined) return undefined
+      try {
+        return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(timestamp))
+      } catch {
+        return undefined
+      }
     }
 
     /** "2 days ago" for any ISO timestamp, or undefined. */
-    function formatRelative(iso) {
+    function formatRelative(iso, locale) {
       const timestamp = toTimestamp(iso)
       if (timestamp === undefined) return undefined
       const seconds = Math.round((timestamp - Date.now()) / 1000)
       const magnitude = Math.abs(seconds)
-      if (magnitude < 60) return relativeTime.format(Math.round(seconds), 'second')
-      if (magnitude < 60 * 60) return relativeTime.format(Math.round(seconds / 60), 'minute')
-      if (magnitude < 24 * 60 * 60) return relativeTime.format(Math.round(seconds / (60 * 60)), 'hour')
-      if (magnitude < 30 * 24 * 60 * 60) return relativeTime.format(Math.round(seconds / (24 * 60 * 60)), 'day')
-      if (magnitude < 365 * 24 * 60 * 60) return relativeTime.format(Math.round(seconds / (30 * 24 * 60 * 60)), 'month')
-      return relativeTime.format(Math.round(seconds / (365 * 24 * 60 * 60)), 'year')
+      const [value, unit] =
+        magnitude < 60
+          ? [seconds, 'second']
+          : magnitude < 60 * 60
+            ? [seconds / 60, 'minute']
+            : magnitude < 24 * 60 * 60
+              ? [seconds / (60 * 60), 'hour']
+              : magnitude < 30 * 24 * 60 * 60
+                ? [seconds / (24 * 60 * 60), 'day']
+                : magnitude < 365 * 24 * 60 * 60
+                  ? [seconds / (30 * 24 * 60 * 60), 'month']
+                  : [seconds / (365 * 24 * 60 * 60), 'year']
+      try {
+        return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(Math.round(value), unit)
+      } catch {
+        return undefined
+      }
+    }
+
+    /** "Nov 18, 2026, 8:17 PM" for a tooltip, or undefined. */
+    function formatDateTime(iso, locale) {
+      const timestamp = toTimestamp(iso)
+      if (timestamp === undefined) return undefined
+      try {
+        return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(timestamp))
+      } catch {
+        return undefined
+      }
+    }
+
+    /** Turn a Host error string into short user copy plus the raw detail. */
+    function describeError(error, t) {
+      if (typeof error !== 'string' || error.length === 0) return undefined
+      if (error.startsWith('Could not find ')) return { message: t('row.missingInstall'), detail: error }
+      if (/did not answer within/.test(error)) return { message: t('error.timeout'), detail: error }
+      const http = /HTTP (\d{3})/.exec(error)
+      if (http !== null) return { message: t('error.http', { status: http[1] }), detail: error }
+      if (/registry response|dist-tag|valid version|JSON|unexpected/i.test(error)) {
+        return { message: t('error.registry'), detail: error }
+      }
+      return { message: t('error.network'), detail: error }
     }
 
     function readDismissedVersion() {
@@ -197,6 +238,12 @@ window.__ModuleLoader__.load({
       return state
     }
 
+    function useLocale(ctx) {
+      const [snapshot, setSnapshot] = React.useState(() => ctx.locale.getSnapshot())
+      React.useEffect(() => ctx.locale.subscribe(() => setSnapshot(ctx.locale.getSnapshot())), [ctx])
+      return snapshot.active
+    }
+
     // ---------------------------------------------------------------------
     // Small shared controls
     // ---------------------------------------------------------------------
@@ -232,7 +279,7 @@ window.__ModuleLoader__.load({
     // Settings → General row
     // ---------------------------------------------------------------------
 
-    function UpdatesRow({ store, t }) {
+    function UpdatesRow({ store, t, locale }) {
       const state = useStatus(store)
       const payload = state.payload
       const installed = payload?.installed
@@ -240,9 +287,10 @@ window.__ModuleLoader__.load({
       const busy = state.phase === 'loading' || state.phase === 'refreshing'
       const error = state.error ?? (typeof payload?.error === 'string' ? payload.error : undefined)
       const updateAvailable = payload?.updateAvailable === true && latest !== undefined
-      const installedPublished = formatPublished(installed?.publishedAt)
-      const latestPublished = formatPublished(latest?.publishedAt)
-      const checked = formatRelative(payload?.checkedAt)
+      const installedPublished = formatPublished(installed?.publishedAt, locale)
+      const latestPublished = formatPublished(latest?.publishedAt, locale)
+      const checked = formatRelative(payload?.checkedAt, locale)
+      const checkedTitle = formatDateTime(payload?.checkedAt, locale)
       const source = installed?.installKind
       const sourceLabel =
         source === 'npm'
@@ -252,6 +300,8 @@ window.__ModuleLoader__.load({
             : source === 'yarn'
               ? t('row.source.yarn')
               : t('row.source.unknown')
+      const installMissing = payload !== undefined && installed?.version === undefined
+      const errorView = error !== undefined && !installMissing ? describeError(error, t) : undefined
 
       const status =
         error !== undefined || payload === undefined
@@ -279,8 +329,12 @@ window.__ModuleLoader__.load({
                   ? t('row.installedNoDate', { version: installed.version })
                   : t('row.installed', { version: installed.version, published: installedPublished }),
               )
-            : h('div', { className: 'dsh-nmu-row-description' }, t('row.missingInstall')),
-          latest !== undefined
+            : installMissing
+              ? h('div', { className: 'dsh-nmu-row-description' }, t('row.missingInstall'))
+              : error === undefined
+                ? h('div', { className: 'dsh-nmu-row-description' }, t('row.checkingStatus'))
+                : null,
+          latest !== undefined && payload?.relation !== 'current'
             ? h(
                 'div',
                 { className: 'dsh-nmu-row-description' },
@@ -289,7 +343,9 @@ window.__ModuleLoader__.load({
                   : t('row.latest', { version: latest.version, published: latestPublished }),
               )
             : null,
-          error !== undefined ? h('div', { className: 'dsh-nmu-row-error', role: 'alert' }, t('row.error', { message: error })) : null,
+          errorView !== undefined
+            ? h('div', { className: 'dsh-nmu-row-error', role: 'alert', title: errorView.detail }, errorView.message)
+            : null,
           updateAvailable && typeof payload?.upgradeCommand === 'string'
             ? h(
                 'div',
@@ -307,7 +363,7 @@ window.__ModuleLoader__.load({
           checked !== undefined
             ? h(
                 'div',
-                { className: 'dsh-nmu-row-meta' },
+                { className: 'dsh-nmu-row-meta', title: checkedTitle },
                 installed?.version === undefined
                   ? t('row.checked', { when: checked })
                   : `${t('row.checked', { when: checked })} · ${sourceLabel}`,
@@ -339,7 +395,7 @@ window.__ModuleLoader__.load({
     // Frame-overlay notice
     // ---------------------------------------------------------------------
 
-    function UpdateNotice({ store, t }) {
+    function UpdateNotice({ store, t, locale }) {
       const state = useStatus(store)
       const payload = state.payload
       const latest = payload?.latest
@@ -348,54 +404,58 @@ window.__ModuleLoader__.load({
 
       const visible =
         payload?.updateAvailable === true && latest !== undefined && installed?.version !== undefined && dismissedFor !== latest.version
-      if (!visible) return null
+      const published = visible ? formatRelative(latest.publishedAt, locale) : undefined
+      const publishedTitle = visible ? formatPublished(latest.publishedAt, locale) : undefined
+      const body = !visible
+        ? ''
+        : published === undefined
+          ? t('notice.bodyNoDate', { latest: latest.version, installed: installed.version })
+          : t('notice.body', { latest: latest.version, installed: installed.version, published })
 
       const dismiss = () => {
+        if (!visible) return
         writeDismissedVersion(latest.version)
         setDismissedFor(latest.version)
       }
-      const published = formatRelative(latest.publishedAt)
 
       return h(
-        'div',
-        { className: 'dsh-nmu-notice', role: 'status', 'aria-live': 'polite' },
-        h(
-          'div',
-          { className: 'dsh-nmu-notice-head' },
-          h('span', { className: 'dsh-nmu-notice-dot', 'aria-hidden': 'true' }),
-          h('span', { className: 'dsh-nmu-notice-title' }, t('notice.title')),
-          h(
-            'button',
-            { type: 'button', className: 'dsh-nmu-notice-close', 'aria-label': t('notice.dismiss'), onClick: dismiss },
-            '×',
-          ),
-        ),
-        h(
-          'p',
-          { className: 'dsh-nmu-notice-body' },
-          published === undefined
-            ? t('notice.bodyNoDate', { latest: latest.version, installed: installed.version })
-            : t('notice.body', { latest: latest.version, installed: installed.version, published }),
-        ),
-        typeof payload.upgradeCommand === 'string'
+        React.Fragment,
+        null,
+        // Persistent live region: keeps the announcement node mounted so a
+        // later update is announced instead of appearing silently.
+        h('div', { className: 'dsh-nmu-sr-only', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' }, body),
+        visible
           ? h(
               'div',
-              { className: 'dsh-nmu-notice-command' },
-              h('span', { className: 'dsh-nmu-notice-command-label' }, t('notice.commandLabel')),
-              h('code', { className: 'dsh-nmu-notice-command-text' }, payload.upgradeCommand),
-              h(CopyButton, {
-                text: payload.upgradeCommand,
-                label: t('notice.copyCommand'),
-                copiedLabel: t('action.copied'),
-                className: 'dsh-nmu-notice-button dsh-nmu-notice-button-primary',
-              }),
+              { className: 'dsh-nmu-notice' },
+              h(
+                'div',
+                { className: 'dsh-nmu-notice-head' },
+                h('span', { className: 'dsh-nmu-notice-dot', 'aria-hidden': 'true' }),
+                h('span', { className: 'dsh-nmu-notice-title' }, t('notice.title')),
+                h(
+                  'button',
+                  { type: 'button', className: 'dsh-nmu-notice-close', 'aria-label': t('notice.dismiss'), onClick: dismiss },
+                  '×',
+                ),
+              ),
+              h('p', { className: 'dsh-nmu-notice-body', title: publishedTitle }, body),
+              typeof payload.upgradeCommand === 'string'
+                ? h(
+                    'div',
+                    { className: 'dsh-nmu-notice-command' },
+                    h('span', { className: 'dsh-nmu-notice-command-label' }, t('notice.commandLabel')),
+                    h('code', { className: 'dsh-nmu-notice-command-text' }, payload.upgradeCommand),
+                    h(CopyButton, {
+                      text: payload.upgradeCommand,
+                      label: t('notice.copyCommand'),
+                      copiedLabel: t('action.copied'),
+                      className: 'dsh-nmu-notice-button dsh-nmu-notice-button-primary',
+                    }),
+                  )
+                : null,
             )
           : null,
-        h(
-          'div',
-          { className: 'dsh-nmu-notice-actions' },
-          h('button', { type: 'button', className: 'dsh-nmu-notice-button', onClick: dismiss }, t('notice.dismiss')),
-        ),
       )
     }
 
@@ -404,6 +464,17 @@ window.__ModuleLoader__.load({
     // ---------------------------------------------------------------------
 
     const CSS = `
+.dsh-nmu-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
 .dsh-nmu-row {
   display: flex;
   align-items: center;
@@ -421,13 +492,13 @@ window.__ModuleLoader__.load({
 .dsh-nmu-command { display: flex; align-items: center; gap: 8px; margin-top: 8px; min-width: 0; }
 .dsh-nmu-command-label { font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-secondary); white-space: nowrap; }
 .dsh-nmu-command-text {
-  font-family: var(--dsw-font-family-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-family: var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, monospace);
   font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-label-primary);
   background: var(--dsw-alias-bg-layer-2);
   border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 6px;
+  border-radius: var(--dsw-radius-sm);
   padding: 2px 8px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -437,14 +508,14 @@ window.__ModuleLoader__.load({
   font-size: 12px;
   line-height: 18px;
   padding: 1px 8px;
-  border-radius: 9px;
+  border-radius: var(--dsw-radius-sm);
   white-space: nowrap;
   border: 1px solid transparent;
 }
 .dsh-nmu-pill-update {
-  color: var(--dsw-alias-brand-primary);
-  border-color: var(--dsw-alias-brand-primary);
-  background: color-mix(in srgb, var(--dsw-alias-brand-primary) 10%, transparent);
+  color: var(--dsw-alias-state-business-primary, var(--dsw-alias-brand-primary));
+  border-color: var(--dsw-alias-state-business-primary, var(--dsw-alias-brand-primary));
+  background: color-mix(in srgb, var(--dsw-alias-state-business-primary, var(--dsw-alias-brand-primary)) 10%, transparent);
 }
 .dsh-nmu-pill-current {
   color: var(--dsw-alias-state-success-primary);
@@ -456,58 +527,71 @@ window.__ModuleLoader__.load({
   border-color: var(--dsw-alias-border-l2);
 }
 .dsh-nmu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  box-sizing: border-box;
   font: inherit;
   font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-label-primary);
   background: var(--dsw-alias-bg-layer-2);
   border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 6px;
-  padding: 3px 10px;
+  border-radius: var(--dsw-radius-sm);
+  padding: 0 10px;
   cursor: pointer;
   white-space: nowrap;
 }
 .dsh-nmu-button:hover:not(:disabled) { background: var(--dsw-alias-bg-base); }
 .dsh-nmu-button:disabled { cursor: default; opacity: .6; }
-.dsh-nmu-button-small { padding: 1px 8px; }
+.dsh-nmu-button-small { min-height: 26px; padding: 0 8px; }
 .dsh-nmu-button:focus-visible,
 .dsh-nmu-notice-button:focus-visible,
 .dsh-nmu-notice-close:focus-visible {
-  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline: 2px solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary, var(--dsw-alias-brand-primary)));
   outline-offset: 2px;
 }
 .dsh-nmu-notice {
   position: fixed;
-  top: 56px;
-  right: 16px;
-  z-index: 40;
-  width: min(360px, calc(100vw - 32px));
+  top: var(--dsh-frame-overlay-top, 12px);
+  right: 12px;
+  width: min(380px, calc(100vw - 24px));
   box-sizing: border-box;
-  padding: 12px 14px 10px;
-  border-radius: 10px;
+  padding: 12px 16px;
+  border-radius: var(--dsw-radius-lg);
   background: var(--dsw-alias-toast-bg);
   color: var(--dsw-alias-toast-label);
-  font-size: 13px;
-  line-height: 18px;
+  box-shadow: var(--dsw-shadow-lv3);
+  font-size: 14px;
+  line-height: 22px;
 }
 .dsh-nmu-notice-head { display: flex; align-items: center; gap: 8px; }
 .dsh-nmu-notice-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+  width: 8px;
+  height: 8px;
   flex: none;
+  border-radius: 50%;
+  corner-shape: round;
   background: var(--dsw-alias-state-warn-primary);
 }
 .dsh-nmu-notice-title { font-weight: 600; flex: 1 1 auto; min-width: 0; }
 .dsh-nmu-notice-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: -4px -6px -4px 0;
+  flex: none;
   font: inherit;
-  font-size: 16px;
-  line-height: 16px;
+  font-size: 18px;
+  line-height: 1;
   color: inherit;
   background: none;
   border: none;
-  border-radius: 4px;
-  padding: 2px 4px;
+  border-radius: var(--dsw-radius-sm);
+  padding: 0;
   cursor: pointer;
   opacity: .75;
 }
@@ -522,23 +606,27 @@ window.__ModuleLoader__.load({
   padding-top: 10px;
   border-top: 1px solid color-mix(in srgb, var(--dsw-alias-toast-label) 18%, transparent);
 }
-.dsh-nmu-notice-command-label { opacity: .7; font-size: 12px; }
+.dsh-nmu-notice-command-label { opacity: .7; font-size: 12px; line-height: 18px; }
 .dsh-nmu-notice-command-text {
-  font-family: var(--dsw-font-family-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-family: var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, monospace);
   font-size: 12px;
   line-height: 18px;
   overflow-wrap: anywhere;
 }
-.dsh-nmu-notice-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
 .dsh-nmu-notice-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  box-sizing: border-box;
   font: inherit;
   font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-toast-label);
   background: none;
   border: 1px solid color-mix(in srgb, var(--dsw-alias-toast-label) 30%, transparent);
-  border-radius: 6px;
-  padding: 2px 10px;
+  border-radius: var(--dsw-radius-sm);
+  padding: 0 10px;
   cursor: pointer;
 }
 .dsh-nmu-notice-button:hover { background: color-mix(in srgb, var(--dsw-alias-toast-label) 10%, transparent); }
@@ -546,11 +634,8 @@ window.__ModuleLoader__.load({
 `
 
     function installStyles() {
-      const id = 'npm-update-notifier/styles'
-      const existing = document.querySelector(`style[data-dsh-nmu="${id}"]`)
-      if (existing !== null) return () => {}
       const tag = document.createElement('style')
-      tag.dataset.dshNmu = id
+      tag.dataset.dshNmu = 'npm-update-notifier/styles'
       tag.textContent = CSS
       document.head.append(tag)
       return () => tag.remove()
@@ -567,16 +652,16 @@ window.__ModuleLoader__.load({
         ctx.effect(() => () => store.dispose(), 'npm-update-notifier: status store')
 
         ctx.slots.inject('settings.general.item', () =>
-          ctx.slots.register(
-            { name: 'settings.general.item', id: NS, order: 35 },
-            () => h(UpdatesRow, { store, t }),
-          ),
+          ctx.slots.register({ name: 'settings.general.item', id: NS, order: 35 }, () => {
+            const locale = useLocale(ctx)
+            return h(UpdatesRow, { store, t, locale })
+          }),
         )
         ctx.slots.inject('shell.overlay', () =>
-          ctx.slots.register(
-            { name: 'shell.overlay', id: `${NS}-notice` },
-            () => h(UpdateNotice, { store, t }),
-          ),
+          ctx.slots.register({ name: 'shell.overlay', id: `${NS}-notice` }, () => {
+            const locale = useLocale(ctx)
+            return h(UpdateNotice, { store, t, locale })
+          }),
         )
 
         void store.load(false)

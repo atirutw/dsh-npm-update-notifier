@@ -370,7 +370,12 @@ export async function requestStatus({ options, installation, fetchImpl = globalT
   const relation = comparison === undefined ? 'unknown' : comparison > 0 ? 'behind' : comparison < 0 ? 'ahead' : 'current'
   const updateAvailable = relation === 'behind'
   const hasLocalVersion = installed.version !== undefined
-  const command = hasLocalVersion && updateAvailable ? upgradeCommand(installed.installKind, options.packageName) : undefined
+  // Only suggest a command for an install kind we can actually upgrade; an
+  // unknown layout must not be told to run a global npm install.
+  const command =
+    hasLocalVersion && updateAvailable && installed.installKind !== 'unknown'
+      ? upgradeCommand(installed.installKind, options.packageName)
+      : undefined
 
   return {
     schema: 1,
