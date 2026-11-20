@@ -17,7 +17,13 @@ Built for npm-installed DSH. A source launch resolves too; a packaged Desktop bu
 dsh plugin --profile web add /path/to/dsh-npm-update-notifier
 ```
 
-Or in the Web GUI: **Plugins → Add plugin**, then pick this directory. Restart DSH if the bundle does not load immediately.
+Or install directly from the repository once it has a Git URL:
+
+```sh
+dsh plugin --profile web add git+https://<host>/<owner>/dsh-npm-update-notifier
+```
+
+Or in the Web GUI: **Plugins → Add plugin**, then pick the checkout directory. Restart DSH if the bundle does not load immediately.
 
 ## Configuration
 

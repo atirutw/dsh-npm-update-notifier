@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "npm update notifier",
-    "description": "Checks npm for a newer DeepSeek Harness release. The Settings → General row \"DSH updates\" shows the installed and latest versions with their publish dates, and a dismissible notice appears in the top-right corner when an update is available. For npm-installed DSH.",
+    "title": "Update notifier",
+    "description": "Checks npm for newer DeepSeek Harness releases. The Settings → General row \"DSH updates\" shows the installed and latest versions with their publish dates, and a dismissible notice appears in the top-right corner when an update is available. Requires an npm-installed DSH.",
     "detail": "docs/DETAIL.md"
   }
 }
