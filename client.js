@@ -1,5 +1,5 @@
 /**
- * npm-update-notifier — Client half.
+ * dsh-npm-update-notifier — Client half.
  *
  * Reads the Host half's status route and adds two things to the web UI:
  *
@@ -11,12 +11,12 @@
  * every control is local to this file.
  */
 window.__ModuleLoader__.load({
-  id: 'npm-update-notifier',
+  id: 'dsh-npm-update-notifier',
   factory(require) {
     const React = require('react')
     const h = React.createElement
 
-    const NS = 'npm-update-notifier'
+    const NS = 'dsh-npm-update-notifier'
     const STATUS_ROUTE = '/dsh-npm-update-notifier/status'
     const POLL_INTERVAL_MS = 6 * 60 * 60 * 1000
     const RETRY_DELAY_MS = 60 * 1000
@@ -635,7 +635,7 @@ window.__ModuleLoader__.load({
 
     function installStyles() {
       const tag = document.createElement('style')
-      tag.dataset.dshNmu = 'npm-update-notifier/styles'
+      tag.dataset.dshNmu = 'dsh-npm-update-notifier/styles'
       tag.textContent = CSS
       document.head.append(tag)
       return () => tag.remove()
@@ -647,9 +647,9 @@ window.__ModuleLoader__.load({
         const store = createStatusStore()
         const t = ctx.locale.bind(NS)
 
-        ctx.effect(() => installStyles(), 'npm-update-notifier: styles')
-        ctx.effect(() => ctx.locale.register(NS, { en }), 'npm-update-notifier: dictionaries')
-        ctx.effect(() => () => store.dispose(), 'npm-update-notifier: status store')
+        ctx.effect(() => installStyles(), 'dsh-npm-update-notifier: styles')
+        ctx.effect(() => ctx.locale.register(NS, { en }), 'dsh-npm-update-notifier: dictionaries')
+        ctx.effect(() => () => store.dispose(), 'dsh-npm-update-notifier: status store')
 
         ctx.slots.inject('settings.general.item', () =>
           ctx.slots.register({ name: 'settings.general.item', id: NS, order: 35 }, () => {
@@ -670,7 +670,7 @@ window.__ModuleLoader__.load({
             void store.load(false)
           }, POLL_INTERVAL_MS)
           return () => window.clearInterval(timer)
-        }, 'npm-update-notifier: poll timer')
+        }, 'dsh-npm-update-notifier: poll timer')
       },
     }
   },

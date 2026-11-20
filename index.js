@@ -1,5 +1,5 @@
 /**
- * npm-update-notifier — Host half.
+ * dsh-npm-update-notifier — Host half.
  *
  * Figures out which `@deepseek-ai/dsh` installation is running, asks the npm
  * registry about the current `latest` dist-tag, and serves one small JSON
@@ -11,14 +11,14 @@
  * dismissible update notice. Nothing is written anywhere; the only data that
  * leaves the machine is a plain GET to the configured registry.
  *
- * @module npm-update-notifier
+ * @module dsh-npm-update-notifier
  */
 import { readFileSync, realpathSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const name = 'npm-update-notifier'
+export const name = 'dsh-npm-update-notifier'
 
 /** The route the Client half polls. Keep in sync with `client.js`. */
 export const STATUS_ROUTE = '/dsh-npm-update-notifier/status'
@@ -327,7 +327,7 @@ export async function requestStatus({ options, installation, fetchImpl = globalT
       method: 'GET',
       headers: {
         accept: 'application/json',
-        'user-agent': `npm-update-notifier/${PLUGIN_VERSION}`,
+        'user-agent': `dsh-npm-update-notifier/${PLUGIN_VERSION}`,
       },
       signal: AbortSignal.timeout(options.timeoutMs),
     })
@@ -490,7 +490,7 @@ export function apply(ctx, config) {
           }
         },
       }),
-    'npm-update-notifier: status route',
+    'dsh-npm-update-notifier: status route',
   )
 }
 

@@ -1,5 +1,5 @@
 {
-  "name": "npm-update-notifier",
+  "name": "dsh-npm-update-notifier",
   "version": "0.1.0",
   "description": "DeepSeek Harness plugin that notifies you when a newer @deepseek-ai/dsh is available on npm.",
   "type": "module",

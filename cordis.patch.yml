@@ -1,8 +1,8 @@
-# npm-update-notifier — loader patch.
+# dsh-npm-update-notifier — loader patch.
 #
 # One Host row inserts the plugin and its Client half. Tune it under `config:`
-# in your profile's own cordis.patch.yml by targeting `id: npm-update-notifier`.
+# in your profile's own cordis.patch.yml by targeting `id: dsh-npm-update-notifier`.
 - insert:
-    - id: npm-update-notifier
-      name: npm-update-notifier
+    - id: dsh-npm-update-notifier
+      name: dsh-npm-update-notifier
       config: {}

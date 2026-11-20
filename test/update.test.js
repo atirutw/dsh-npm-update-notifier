@@ -19,7 +19,7 @@ import {
 } from '../index.js'
 
 function temporaryDirectory(t) {
-  const directory = mkdtempSync(join(tmpdir(), 'npm-update-notifier-'))
+  const directory = mkdtempSync(join(tmpdir(), 'dsh-npm-update-notifier-'))
   t.after(() => rmSync(directory, { recursive: true, force: true }))
   return directory
 }

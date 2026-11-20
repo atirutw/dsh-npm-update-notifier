@@ -1,4 +1,4 @@
-# npm-update-notifier
+# dsh-npm-update-notifier
 
 A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin that reports newer `@deepseek-ai/dsh` releases from npm.
 
@@ -30,8 +30,8 @@ Or in the Web GUI: **Plugins → Add plugin**, then pick the checkout directory.
 ## Configuration
 
 ```yaml
-- id: npm-update-notifier
-  name: npm-update-notifier
+- id: dsh-npm-update-notifier
+  name: dsh-npm-update-notifier
   config:
     checkIntervalMinutes: 120
     timeoutMs: 8000
